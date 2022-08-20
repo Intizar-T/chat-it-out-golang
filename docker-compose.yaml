@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgis/postgis:10-3.0-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: coinchat
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  coinchat-deps:
+    image: gcr.io/google_containers/pause:0.8.0
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:

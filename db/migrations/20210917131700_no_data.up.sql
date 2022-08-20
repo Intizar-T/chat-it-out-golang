@@ -1,0 +1,1 @@
+-- the file is committed in initial commit, so we need it to ensure DB migration works correctly
