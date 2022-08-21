@@ -35,7 +35,6 @@ func (h *Handler) SignUp(ctx context.Context, user User) (*User, error) {
 	// todo: verify the user
 	_, err := h.userRepo.GetUserByNameOrPublicKey(ctx, user.Name, user.PublicKey)
 	if err == nil {
-		fmt.Printf("Received signed up user retry to sign in: %+v", err)
 		return nil, fmt.Errorf("user already signed up or name is already taken")
 	}
 	if err := h.userRepo.AddUser(ctx, *user.ToRepoUser()); err != nil {
@@ -52,6 +51,14 @@ func (h *Handler) Login(ctx context.Context, user User) (*User, error) {
 	dbUser, err := h.userRepo.GetUserByNameAndPassword(ctx, user.Name, user.Password)
 	if err != nil || dbUser == nil {
 		return nil, fmt.Errorf("invalid name or password")
+	}
+	return FromRepoUser(*dbUser), nil
+}
+
+func (h *Handler) Search(ctx context.Context, user User) (*User, error) {
+	dbUser, err := h.userRepo.GetByPublicKey(ctx, user.PublicKey)
+	if err != nil || dbUser == nil {
+		return nil, fmt.Errorf("user is not found")
 	}
 	return FromRepoUser(*dbUser), nil
 }

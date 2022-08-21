@@ -46,6 +46,16 @@ func (r *UserRepo) GetUser(ctx context.Context, userId int64) (*User, error) {
 	return &result, nil
 }
 
+func (r *UserRepo) GetByPublicKey(ctx context.Context, publicKey string) (*User, error) {
+	query := "select * from users where public_key=$1"
+	var result User
+	err := r.QueryOne(ctx, &result, query, publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 func (r *UserRepo) GetUserByNameAndPassword(ctx context.Context, name string, pwd string) (*User, error) {
 	query := "select * from users where user_name=$1 AND user_password=$2"
 	var result User

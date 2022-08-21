@@ -27,8 +27,6 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	switch r.Method {
-	case http.MethodGet:
-		h.HandleGet(ctx, w, r)
 	case http.MethodPost:
 		h.HandlePost(ctx, w, r)
 	default:
@@ -92,24 +90,27 @@ func (h *Handler) HandlePost(ctx context.Context, w http.ResponseWriter, r *http
 			h.WriteMessage(w, err.Error())
 			return
 		}
+		if message.ReceiverId == message.SenderId {
+			w.WriteHeader(http.StatusBadRequest)
+			h.WriteMessage(w, "Sender and receiver are same")
+		}
 		err := h.NewMessage(ctx, message)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			h.WriteMessage(w, err.Error())
 			return
 		}
-		h.WriteMessage(w, "OK")
+		messages, err := h.GetConversations(ctx, message.ReceiverId, message.SenderId)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			h.WriteMessage(w, err)
+			return
+		}
+		h.WriteMessage(w, messages)
 		return
-	default:
-		// w.WriteHeader(http.StatusNotFound)
-		h.WriteMessage(w, "status not found")
-		return
-	}
-}
-
-func (h *Handler) HandleGet(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
 	case "/messages":
+		var b []byte
+		r.Body.Read(b)
 		var user User
 		if err := unMarshall(r.Body, &user); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -133,13 +134,27 @@ func (h *Handler) HandleGet(ctx context.Context, w http.ResponseWriter, r *http.
 		messages, err := h.GetConversations(ctx, conversation.UserId, conversation.FriendId)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			h.WriteMessage(w, err)
+			h.Write(w, err)
 			return
 		}
 		h.WriteMessage(w, messages)
+	case "/search":
+		var user User
+		if err := unMarshall(r.Body, &user); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			h.WriteMessage(w, err.Error())
+			return
+		}
+		signedUser, err := h.Search(ctx, user)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			h.WriteMessage(w, err.Error())
+			return
+		}
+		h.Write(w, signedUser)
 	default:
 		// w.WriteHeader(http.StatusNotFound)
-		h.WriteMessage(w, "invalid path for get request")
+		h.WriteMessage(w, "status not found")
 		return
 	}
 }

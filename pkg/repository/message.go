@@ -38,13 +38,13 @@ func (r *MessageRepo) CreateMessage(ctx context.Context, message Message) error 
 	return r.CreateOne(ctx, query, message)
 }
 
-func (r *MessageRepo) GetSenderMessages(ctx context.Context, receiverId int) ([]Message, error) {
+func (r *MessageRepo) GetSenderMessages(ctx context.Context, id int) ([]Message, error) {
 	query := `
 	SELECT * FROM messages
-	WHERE receiver_id=$1 OR sender_id=$1 ORDER BY created_at DESC
+	WHERE receiver_id=$1 OR sender_id=$1 ORDER BY created_at ASC
 	`
 	var result []Message
-	err := r.Query(ctx, &result, query, receiverId)
+	err := r.Query(ctx, &result, query, id)
 	if err != nil {
 		return nil, err
 	}

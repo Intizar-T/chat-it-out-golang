@@ -12,12 +12,18 @@ type Message struct {
 	SenderName   string    `json:"senderName"`
 	ReceiverId   int       `json:"receiverId"`
 	ReceiverName string    `json:"receiverName"`
+	Message      string    `json:"message"`
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
 type Conversation struct {
 	UserId   int `json:"userId"`
 	FriendId int `json:"friendId"`
+}
+
+type ConversationMessages struct {
+	Id       int       `json: "id"`
+	Messages []Message `json:"messages"`
 }
 
 func MessageFromRepoMessage(repoMessage *repository.Message) Message {
@@ -27,6 +33,7 @@ func MessageFromRepoMessage(repoMessage *repository.Message) Message {
 		SenderName:   repoMessage.SenderName,
 		ReceiverId:   repoMessage.ReceiverId,
 		ReceiverName: repoMessage.ReceiverName,
+		Message:      repoMessage.Message,
 		CreatedAt:    repoMessage.CreatedAt,
 	}
 }
@@ -38,6 +45,7 @@ func (m *Message) ConvertToMessageRepo() repository.Message {
 		SenderName:   m.SenderName,
 		ReceiverId:   m.ReceiverId,
 		ReceiverName: m.ReceiverName,
+		Message:      m.Message,
 		CreatedAt:    m.CreatedAt,
 	}
 }
@@ -54,7 +62,7 @@ func (h *Handler) GetConversations(ctx context.Context, userId int, friendId int
 	return res, nil
 }
 
-func (h *Handler) GetMessages(ctx context.Context, user User) (map[int][]Message, error) {
+func (h *Handler) GetMessages(ctx context.Context, user User) ([]ConversationMessages, error) {
 	mes, err := h.messageRepo.GetSenderMessages(ctx, user.Id)
 	if err != nil {
 		return nil, err
@@ -65,12 +73,24 @@ func (h *Handler) GetMessages(ctx context.Context, user User) (map[int][]Message
 		if friendId == user.Id {
 			friendId = m.ReceiverId
 		}
-		if _, ok := res[m.SenderId]; ok {
+		if _, ok := res[friendId]; !ok {
 			res[friendId] = []Message{}
 		}
-		res[m.SenderId] = append(res[m.SenderId], MessageFromRepoMessage(&m))
+		res[friendId] = append(res[friendId], MessageFromRepoMessage(&m))
 	}
-	return res, nil
+	cm := []ConversationMessages{}
+	i := 0
+	for key, val := range res {
+		cm = append(cm, ConversationMessages{
+			Id:       key,
+			Messages: []Message{},
+		})
+		for _, mes := range val {
+			cm[i].Messages = append(cm[i].Messages, mes)
+		}
+		i += 1
+	}
+	return cm, nil
 }
 
 func (h *Handler) NewMessage(ctx context.Context, message Message) error {
